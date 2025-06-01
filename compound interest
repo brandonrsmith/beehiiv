@@ -1,0 +1,509 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Compound Interest Calculator with Market Rates</title>
+    <style>
+        .calculator-container {
+            max-width: 700px;
+            margin: 0 auto;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            background-color: #f9f9f9;
+            font-family: Arial, sans-serif;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        input[type="number"], select {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+        button {
+            background-color: #4CAF50;
+            color: white;
+            padding: 10px 15px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        .results {
+            margin-top: 20px;
+            padding: 15px;
+            background-color: #fff;
+            border-radius: 4px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+        }
+        .result-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 10px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #eee;
+        }
+        .result-row:last-child {
+            margin-bottom: 0;
+            padding-bottom: 0;
+            border-bottom: none;
+        }
+        .result-label {
+            font-weight: bold;
+        }
+        .highlight-result {
+            background-color: #e8f5e8;
+            padding: 15px;
+            border-radius: 6px;
+            margin-bottom: 15px;
+            font-size: 18px;
+            font-weight: bold;
+            text-align: center;
+            color: #2e7d32;
+        }
+        h2 {
+            color: #333;
+            margin-top: 0;
+        }
+        
+        /* Rate Feed Styling */
+        .rate-feed {
+            margin-bottom: 20px;
+            background-color: #fff;
+            border-radius: 8px;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+        }
+        .rate-feed-header {
+            background-color: #2c3e50;
+            color: white;
+            padding: 10px 15px;
+            font-weight: bold;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .rate-feed-body {
+            padding: 0;
+        }
+        .rate-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 12px 15px;
+            border-bottom: 1px solid #eee;
+        }
+        .rate-item:last-child {
+            border-bottom: none;
+        }
+        .rate-term {
+            font-weight: bold;
+        }
+        .rate-value {
+            color: #2c3e50;
+            font-weight: bold;
+        }
+        .rate-trend {
+            font-size: 14px;
+            margin-left: 8px;
+        }
+        .trend-up {
+            color: #e74c3c;
+        }
+        .trend-down {
+            color: #2ecc71;
+        }
+        .trend-neutral {
+            color: #95a5a6;
+        }
+        .rate-update {
+            font-size: 12px;
+            color: #7f8c8d;
+            text-align: right;
+            padding: 5px 15px;
+            background-color: #f8f9fa;
+        }
+        .use-rate-btn {
+            background-color: #3498db;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            padding: 5px 10px;
+            font-size: 14px;
+            cursor: pointer;
+            margin-left: 10px;
+        }
+        .use-rate-btn:hover {
+            background-color: #2980b9;
+        }
+        .rates-explainer {
+            font-size: 12px;
+            color: #7f8c8d;
+            margin-top: 5px;
+            font-style: italic;
+            padding: 0 15px 10px;
+        }
+        
+        /* Breakdown Section */
+        .breakdown {
+            margin-top: 20px;
+            background-color: #fff;
+            border-radius: 4px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+            padding: 15px;
+        }
+        .breakdown h3 {
+            margin-top: 0;
+            color: #333;
+            border-bottom: 2px solid #4CAF50;
+            padding-bottom: 5px;
+        }
+        .year-by-year {
+            max-height: 300px;
+            overflow-y: auto;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        .year-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr 1fr;
+            padding: 8px 12px;
+            border-bottom: 1px solid #eee;
+            font-size: 14px;
+        }
+        .year-row:nth-child(even) {
+            background-color: #f8f9fa;
+        }
+        .year-row:first-child {
+            background-color: #e9ecef;
+            font-weight: bold;
+            position: sticky;
+            top: 0;
+        }
+        
+        /* Form layout improvements */
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+        }
+        .form-group.full-width {
+            grid-column: 1 / -1;
+        }
+        
+        @media (max-width: 600px) {
+            .form-row {
+                grid-template-columns: 1fr;
+            }
+            .year-row {
+                font-size: 12px;
+                padding: 6px 8px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="calculator-container">
+        <h2>Compound Interest Calculator</h2>
+        
+        <!-- Market Rates Feed -->
+        <div class="rate-feed">
+            <div class="rate-feed-header">
+                <span>Current Investment Rates</span>
+                <span id="todaysDate"></span>
+            </div>
+            <div class="rate-feed-body">
+                <div class="rate-item">
+                    <span class="rate-term">High-Yield Savings</span>
+                    <div>
+                        <span class="rate-value" id="rateSavings">4.25</span>%
+                        <span class="rate-trend trend-neutral">— 0.00%</span>
+                        <button class="use-rate-btn" onclick="useRate('savings')">Use Rate</button>
+                    </div>
+                </div>
+                <div class="rate-item">
+                    <span class="rate-term">1-Year CD</span>
+                    <div>
+                        <span class="rate-value" id="rateCD1y">4.50</span>%
+                        <span class="rate-trend trend-up">▲ 0.05%</span>
+                        <button class="use-rate-btn" onclick="useRate('cd1y')">Use Rate</button>
+                    </div>
+                </div>
+                <div class="rate-item">
+                    <span class="rate-term">5-Year CD</span>
+                    <div>
+                        <span class="rate-value" id="rateCD5y">4.10</span>%
+                        <span class="rate-trend trend-down">▼ 0.02%</span>
+                        <button class="use-rate-btn" onclick="useRate('cd5y')">Use Rate</button>
+                    </div>
+                </div>
+                <div class="rate-item">
+                    <span class="rate-term">S&P 500 (10-yr avg)</span>
+                    <div>
+                        <span class="rate-value" id="rateSP500">10.50</span>%
+                        <span class="rate-trend trend-up">▲ 0.12%</span>
+                        <button class="use-rate-btn" onclick="useRate('sp500')">Use Rate</button>
+                    </div>
+                </div>
+            </div>
+            <div class="rate-update">Last updated: <span id="lastUpdated">June 1, 2025</span></div>
+            <div class="rates-explainer">Rates shown are current market averages. Investment returns are not guaranteed and may vary.</div>
+        </div>
+        
+        <div class="form-row">
+            <div class="form-group">
+                <label for="initialAmount">Initial Investment ($):</label>
+                <input type="number" id="initialAmount" placeholder="e.g., 10000" min="0" step="100" value="10000">
+            </div>
+            <div class="form-group">
+                <label for="interestRate">Annual Interest Rate (%):</label>
+                <input type="number" id="interestRate" placeholder="e.g., 7.5" min="0" step="0.01" max="50" value="7.5">
+            </div>
+        </div>
+        
+        <div class="form-row">
+            <div class="form-group">
+                <label for="timePeriod">Time Period (years):</label>
+                <input type="number" id="timePeriod" placeholder="e.g., 20" min="1" max="100" step="1" value="20">
+            </div>
+            <div class="form-group">
+                <label for="compoundFrequency">Compounding Frequency:</label>
+                <select id="compoundFrequency">
+                    <option value="365">Daily</option>
+                    <option value="52">Weekly</option>
+                    <option value="26">Bi-weekly</option>
+                    <option value="12" selected>Monthly</option>
+                    <option value="4">Quarterly</option>
+                    <option value="2">Semi-annually</option>
+                    <option value="1">Annually</option>
+                </select>
+            </div>
+        </div>
+        
+        <div class="form-row">
+            <div class="form-group">
+                <label for="monthlyContribution">Regular Contribution ($):</label>
+                <input type="number" id="monthlyContribution" placeholder="e.g., 500" min="0" step="50" value="500">
+            </div>
+            <div class="form-group">
+                <label for="contributionFrequency">Contribution Frequency:</label>
+                <select id="contributionFrequency">
+                    <option value="12" selected>Monthly</option>
+                    <option value="26">Bi-weekly</option>
+                    <option value="52">Weekly</option>
+                    <option value="4">Quarterly</option>
+                    <option value="2">Semi-annually</option>
+                    <option value="1">Annually</option>
+                </select>
+            </div>
+        </div>
+        
+        <div class="form-group full-width">
+            <label for="contributionIncrease">Annual Contribution Increase (%):</label>
+            <input type="number" id="contributionIncrease" placeholder="e.g., 3" min="0" step="0.5" max="20" value="0">
+        </div>
+        
+        <button onclick="calculateCompoundInterest()">Calculate</button>
+        
+        <div class="results" id="results">
+            <div class="highlight-result" id="finalAmount">
+                Final Amount: $0.00
+            </div>
+            <div class="result-row">
+                <span class="result-label">Total Contributions:</span>
+                <span id="totalContributions">$0.00</span>
+            </div>
+            <div class="result-row">
+                <span class="result-label">Total Interest Earned:</span>
+                <span id="totalInterest">$0.00</span>
+            </div>
+            <div class="result-row">
+                <span class="result-label">Effective Annual Rate:</span>
+                <span id="effectiveRate">0.00%</span>
+            </div>
+            <div class="result-row">
+                <span class="result-label">Interest vs Principal Ratio:</span>
+                <span id="interestRatio">0:1</span>
+            </div>
+        </div>
+        
+        <div class="breakdown" id="breakdown">
+            <h3>Year-by-Year Breakdown</h3>
+            <div class="year-by-year" id="yearByYear">
+                <!-- Year-by-year data will be populated here -->
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Set today's date
+        function setDates() {
+            const today = new Date();
+            const options = { year: 'numeric', month: 'long', day: 'numeric' };
+            document.getElementById('todaysDate').textContent = today.toLocaleDateString('en-US', options);
+        }
+        
+        // Use selected rate
+        function useRate(rateType) {
+            let rateElement, rateValue;
+            
+            switch(rateType) {
+                case 'savings':
+                    rateElement = document.getElementById('rateSavings');
+                    break;
+                case 'cd1y':
+                    rateElement = document.getElementById('rateCD1y');
+                    break;
+                case 'cd5y':
+                    rateElement = document.getElementById('rateCD5y');
+                    break;
+                case 'sp500':
+                    rateElement = document.getElementById('rateSP500');
+                    break;
+            }
+            
+            rateValue = parseFloat(rateElement.textContent);
+            document.getElementById('interestRate').value = rateValue;
+            
+            // Recalculate
+            calculateCompoundInterest();
+        }
+        
+        // Calculate compound interest
+        function calculateCompoundInterest() {
+            // Get input values
+            const principal = parseFloat(document.getElementById('initialAmount').value) || 0;
+            const rate = parseFloat(document.getElementById('interestRate').value) || 0;
+            const years = parseFloat(document.getElementById('timePeriod').value) || 0;
+            const compoundFreq = parseFloat(document.getElementById('compoundFrequency').value) || 12;
+            const contribution = parseFloat(document.getElementById('monthlyContribution').value) || 0;
+            const contributionFreq = parseFloat(document.getElementById('contributionFrequency').value) || 12;
+            const contributionIncrease = parseFloat(document.getElementById('contributionIncrease').value) || 0;
+            
+            if (years <= 0) {
+                alert("Please enter a valid time period");
+                return;
+            }
+            
+            // Convert annual rate to decimal
+            const r = rate / 100;
+            
+            // Calculate compound interest with regular contributions
+            let balance = principal;
+            let totalContributions = principal;
+            const yearlyData = [];
+            
+            // Track year-by-year progression
+            for (let year = 1; year <= years; year++) {
+                let yearStartBalance = balance;
+                let yearContributions = 0;
+                
+                // Calculate contribution amount for this year (with annual increase)
+                const currentContribution = contribution * Math.pow(1 + contributionIncrease / 100, year - 1);
+                
+                // Add contributions throughout the year
+                for (let period = 1; period <= contributionFreq; period++) {
+                    // Add contribution
+                    balance += currentContribution;
+                    yearContributions += currentContribution;
+                    totalContributions += currentContribution;
+                    
+                    // Apply interest for this period
+                    const periodsPerYear = compoundFreq;
+                    const periodRate = r / periodsPerYear;
+                    const periodsInContributionPeriod = periodsPerYear / contributionFreq;
+                    
+                    for (let i = 0; i < periodsInContributionPeriod; i++) {
+                        balance = balance * (1 + periodRate);
+                    }
+                }
+                
+                yearlyData.push({
+                    year: year,
+                    startBalance: yearStartBalance,
+                    contributions: yearContributions,
+                    endBalance: balance,
+                    interestEarned: balance - yearStartBalance - yearContributions
+                });
+            }
+            
+            // Calculate final values
+            const finalAmount = balance;
+            const totalInterest = finalAmount - totalContributions;
+            
+            // Calculate effective annual rate
+            const effectiveRate = Math.pow(1 + r / compoundFreq, compoundFreq) - 1;
+            
+            // Format currency
+            const formatter = new Intl.NumberFormat('en-US', {
+                style: 'currency',
+                currency: 'USD',
+                minimumFractionDigits: 2
+            });
+            
+            // Display results
+            document.getElementById('finalAmount').textContent = `Final Amount: ${formatter.format(finalAmount)}`;
+            document.getElementById('totalContributions').textContent = formatter.format(totalContributions);
+            document.getElementById('totalInterest').textContent = formatter.format(totalInterest);
+            document.getElementById('effectiveRate').textContent = (effectiveRate * 100).toFixed(2) + '%';
+            
+            // Calculate interest to principal ratio
+            const ratio = totalInterest / totalContributions;
+            document.getElementById('interestRatio').textContent = `${ratio.toFixed(2)}:1`;
+            
+            // Generate year-by-year breakdown
+            generateYearByYearBreakdown(yearlyData);
+        }
+        
+        // Generate year-by-year breakdown table
+        function generateYearByYearBreakdown(data) {
+            const container = document.getElementById('yearByYear');
+            const formatter = new Intl.NumberFormat('en-US', {
+                style: 'currency',
+                currency: 'USD',
+                minimumFractionDigits: 0,
+                maximumFractionDigits: 0
+            });
+            
+            let html = `
+                <div class="year-row">
+                    <div>Year</div>
+                    <div>Contributions</div>
+                    <div>Interest Earned</div>
+                    <div>Total Balance</div>
+                </div>
+            `;
+            
+            data.forEach(yearData => {
+                html += `
+                    <div class="year-row">
+                        <div>${yearData.year}</div>
+                        <div>${formatter.format(yearData.contributions)}</div>
+                        <div>${formatter.format(yearData.interestEarned)}</div>
+                        <div>${formatter.format(yearData.endBalance)}</div>
+                    </div>
+                `;
+            });
+            
+            container.innerHTML = html;
+        }
+        
+        // Initialize on load
+        window.onload = function() {
+            setDates();
+            calculateCompoundInterest(); // Calculate initial values
+        };
+    </script>
+</body>
+</html>
