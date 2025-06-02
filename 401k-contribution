@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>401(k) Contribution Calculator</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <style>
+        /* Custom styles for Inter font and general body layout */
+        body {
+            font-family: 'Inter', sans-serif;
+            @apply bg-gray-100 flex items-center justify-center min-h-screen p-4;
+        }
+        /* Style for number inputs to remove spin buttons */
+        input[type="number"]::-webkit-outer-spin-button,
+        input[type="number"]::-webkit-inner-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
+        }
+        input[type="number"] {
+            -moz-appearance: textfield;
+        }
+
+        /* Specific styles for the chart */
+        .chart-container {
+            width: 100%;
+            overflow-x: auto; /* Allow horizontal scrolling if chart is too wide */
+        }
+        .line {
+            fill: none;
+            stroke: #3B82F6; /* Blue color for the line */
+            stroke-width: 3px;
+        }
+        .dot {
+            fill: #3B82F6;
+            stroke: #fff;
+            stroke-width: 1.5px;
+        }
+        .tooltip {
+            position: absolute;
+            text-align: center;
+            padding: 8px;
+            font: 12px sans-serif;
+            background: #333;
+            color: white;
+            border-radius: 4px;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.2s;
+        }
+        .axis path,
+        .axis line {
+            fill: none;
+            stroke: #ccc;
+            shape-rendering: crispEdges;
+        }
+        .axis text {
+            font-size: 10px;
+            fill: #666;
+        }
+    </style>
+</head>
+<body class="font-inter">
+    <div class="calculator-container bg-white p-8 rounded-xl shadow-lg w-full max-w-md md:max-w-lg lg:max-w-xl">
+        <h1 class="text-3xl font-bold text-center text-gray-800 mb-6">401(k) Contribution Calculator</h1>
+
+        <div class="input-group mb-4">
+            <label for="salary" class="block text-gray-700 text-sm font-semibold mb-2">Annual Salary ($):</label>
+            <input type="number" id="salary" value="60000" min="0"
+                   class="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition duration-200 ease-in-out">
+        </div>
+
+        <div class="input-group mb-4">
+            <label for="contributionRate" class="block text-gray-700 text-sm font-semibold mb-2">Your Contribution Rate (%):</label>
+            <input type="number" id="contributionRate" value="10" min="0" max="100"
+                   class="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition duration-200 ease-in-out">
+        </div>
+
+        <div class="input-group mb-4">
+            <label for="employerMatchRate" class="block text-gray-700 text-sm font-semibold mb-2">Employer Match Rate (%):</label>
+            <input type="number" id="employerMatchRate" value="3" min="0" max="100"
+                   class="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition duration-200 ease-in-out">
+        </div>
+
+        <div class="input-group mb-4">
+            <label for="matchLimit" class="block text-gray-700 text-sm font-semibold mb-2">Employer Match Limit (as % of salary):</label>
+            <input type="number" id="matchLimit" value="6" min="0" max="100"
+                   class="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition duration-200 ease-in-out">
+        </div>
+
+        <div class="input-group mb-4">
+            <label for="years" class="block text-gray-700 text-sm font-semibold mb-2">Number of Years:</label>
+            <input type="number" id="years" value="20" min="1"
+                   class="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition duration-200 ease-in-out">
+        </div>
+
+        <div class="input-group mb-6">
+            <label for="annualReturn" class="block text-gray-700 text-sm font-semibold mb-2">Annual Investment Return (%):</label>
+            <input type="number" id="annualReturn" value="7" min="0"
+                   class="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition duration-200 ease-in-out">
+        </div>
+
+        <button onclick="calculate401k()"
+                class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-lg transition duration-300 ease-in-out transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50">
+            Calculate
+        </button>
+
+        <div class="results mt-8 pt-6 border-t border-gray-200">
+            <h2 class="text-2xl font-bold text-center text-gray-800 mb-4">Projected 401(k) Balance:</h2>
+            <p id="totalBalance" class="text-4xl font-extrabold text-blue-600 text-center mb-6">$0.00</p>
+
+            <h3 class="text-xl font-semibold text-gray-700 mb-3">Breakdown:</h3>
+            <div class="space-y-2 text-lg">
+                <p class="flex justify-between items-center text-gray-600">
+                    <span>Your Contributions:</span>
+                    <span id="yourContributions" class="font-bold text-green-600">$0.00</span>
+                </p>
+                <p class="flex justify-between items-center text-gray-600">
+                    <span>Employer Contributions:</span>
+                    <span id="employerContributions" class="font-bold text-purple-600">$0.00</span>
+                </p>
+                <p class="flex justify-between items-center text-gray-600">
+                    <span>Investment Growth:</span>
+                    <span id="investmentGrowth" class="font-bold text-yellow-600">$0.00</span>
+                </p>
+            </div>
+
+            <h3 class="text-xl font-semibold text-gray-700 mt-8 mb-3 text-center">Balance Growth Over Time:</h3>
+            <div id="chart-container" class="chart-container bg-gray-50 p-4 rounded-lg shadow-inner">
+                </div>
+            <div id="tooltip" class="tooltip"></div>
+        </div>
+    </div>
+
+    <script>
+        /**
+         * Calculates the projected 401(k) balance based on user inputs.
+         * It considers annual salary, personal contribution rate, employer match rate,
+         * employer match limit, number of years, and annual investment return.
+         * It also prepares data for the visualization.
+         */
+        function calculate401k() {
+            // Get input values from the DOM and convert them to numbers.
+            // Division by 100 converts percentages to decimal values for calculation.
+            const salary = parseFloat(document.getElementById('salary').value);
+            const contributionRate = parseFloat(document.getElementById('contributionRate').value) / 100;
+            const employerMatchRate = parseFloat(document.getElementById('employerMatchRate').value) / 100;
+            const matchLimit = parseFloat(document.getElementById('matchLimit').value) / 100;
+            const years = parseInt(document.getElementById('years').value);
+            const annualReturn = parseFloat(document.getElementById('annualReturn').value) / 100;
+
+            // Initialize variables to store cumulative totals and history for charting
+            let totalBalance = 0;
+            let totalYourContributions = 0;
+            let totalEmployerContributions = 0;
+            const balanceHistory = []; // Array to store balance at the end of each year for the chart
+
+            // Loop through each year to simulate the growth of the 401(k)
+            for (let i = 1; i <= years; i++) {
+                // Calculate your annual contribution based on salary and your contribution rate
+                const yourAnnualContribution = salary * contributionRate;
+
+                // Calculate the potential employer match.
+                // This is based on the employer's match rate on the salary.
+                const potentialEmployerMatch = salary * employerMatchRate;
+
+                // Calculate the actual limit for the employer match.
+                // This is based on the match limit percentage of the salary.
+                const actualMatchLimitAmount = salary * matchLimit;
+
+                // Determine the actual employer annual match.
+                // It's the minimum of the potential match and the defined match limit.
+                const employerAnnualMatch = Math.min(potentialEmployerMatch, actualMatchLimitAmount);
+
+                // Calculate the total contributions for the current year (yours + employer's)
+                const annualTotalContribution = yourAnnualContribution + employerAnnualMatch;
+
+                // Accumulate total contributions for breakdown display
+                totalYourContributions += yourAnnualContribution;
+                totalEmployerContributions += employerAnnualMatch;
+
+                // Project the balance growth:
+                // If it's the first year, the balance is just the total contributions for that year.
+                // Otherwise, the existing balance grows by the annual return, and then
+                // the new annual contributions are added to it. This simulates compounding.
+                if (i === 1) {
+                    totalBalance = annualTotalContribution;
+                } else {
+                    totalBalance *= (1 + annualReturn); // Apply investment growth to existing balance
+                    totalBalance += annualTotalContribution; // Add new contributions for the year
+                }
+                // Store the balance at the end of the current year for charting
+                balanceHistory.push({ year: i, balance: totalBalance });
+            }
+
+            // Calculate the total investment growth.
+            // This is the final balance minus the sum of all contributions (yours and employer's).
+            const totalInvestmentGrowth = totalBalance - (totalYourContributions + totalEmployerContributions);
+
+            // Display the calculated results in the respective HTML elements.
+            // .toFixed(2) formats the numbers to two decimal places for currency display.
+            document.getElementById('totalBalance').textContent = '$' + totalBalance.toFixed(2);
+            document.getElementById('yourContributions').textContent = '$' + totalYourContributions.toFixed(2);
+            document.getElementById('employerContributions').textContent = '$' + totalEmployerContributions.toFixed(2);
+            document.getElementById('investmentGrowth').textContent = '$' + totalInvestmentGrowth.toFixed(2);
+
+            // Draw the chart with the collected balance history
+            drawChart(balanceHistory);
+        }
+
+        /**
+         * Draws a line chart using D3.js to visualize the 401(k) balance growth over years.
+         * @param {Array<Object>} data - An array of objects, each with 'year' and 'balance' properties.
+         */
+        function drawChart(data) {
+            // Clear any existing SVG to prevent multiple charts from being drawn
+            d3.select("#chart-container svg").remove();
+
+            const container = d3.select("#chart-container");
+            const containerWidth = container.node().getBoundingClientRect().width;
+
+            // Set up chart dimensions and margins
+            const margin = { top: 20, right: 30, bottom: 50, left: 70 };
+            const width = Math.max(containerWidth - margin.left - margin.right, 300); // Ensure minimum width
+            const height = 300 - margin.top - margin.bottom;
+
+            // Create SVG element
+            const svg = container.append("svg")
+                .attr("width", width + margin.left + margin.right)
+                .attr("height", height + margin.top + margin.bottom)
+                .append("g")
+                .attr("transform", `translate(${margin.left},${margin.top})`);
+
+            // Define X and Y scales
+            const xScale = d3.scaleLinear()
+                .domain(d3.extent(data, d => d.year)) // Domain from min to max year
+                .range([0, width]);
+
+            const yScale = d3.scaleLinear()
+                .domain([0, d3.max(data, d => d.balance) * 1.1]) // Domain from 0 to max balance + 10% padding
+                .range([height, 0]);
+
+            // Create X and Y axes
+            const xAxis = d3.axisBottom(xScale)
+                .tickFormat(d3.format("d")) // Format years as integers
+                .ticks(Math.min(data.length, 10)); // Limit ticks for readability
+
+            const yAxis = d3.axisLeft(yScale)
+                .tickFormat(d3.format("$.2s")); // Format currency (e.g., $100k)
+
+            // Append X axis to SVG
+            svg.append("g")
+                .attr("class", "x axis")
+                .attr("transform", `translate(0,${height})`)
+                .call(xAxis)
+                .append("text")
+                .attr("y", 40)
+                .attr("x", width / 2)
+                .attr("fill", "#666")
+                .attr("text-anchor", "middle")
+                .text("Year");
+
+            // Append Y axis to SVG
+            svg.append("g")
+                .attr("class", "y axis")
+                .call(yAxis)
+                .append("text")
+                .attr("transform", "rotate(-90)")
+                .attr("y", -60)
+                .attr("x", -height / 2)
+                .attr("dy", "1em")
+                .attr("fill", "#666")
+                .attr("text-anchor", "middle")
+                .text("Balance ($)");
+
+            // Define the line generator
+            const line = d3.line()
+                .x(d => xScale(d.year))
+                .y(d => yScale(d.balance));
+
+            // Append the line path to SVG
+            svg.append("path")
+                .datum(data)
+                .attr("class", "line")
+                .attr("d", line);
+
+            // Add circles for each data point and tooltip functionality
+            const tooltip = d3.select("#tooltip");
+
+            svg.selectAll(".dot")
+                .data(data)
+                .enter().append("circle")
+                .attr("class", "dot")
+                .attr("cx", d => xScale(d.year))
+                .attr("cy", d => yScale(d.balance))
+                .attr("r", 5) // Radius of the circle
+                .on("mouseover", (event, d) => {
+                    tooltip.style("opacity", 1)
+                        .html(`Year: ${d.year}<br/>Balance: $${d.balance.toFixed(2)}`)
+                        .style("left", (event.pageX + 10) + "px")
+                        .style("top", (event.pageY - 28) + "px");
+                })
+                .on("mouseout", () => {
+                    tooltip.style("opacity", 0);
+                });
+        }
+
+        // Call the calculate401k function when the window loads to display initial results
+        // based on the default input values and draw the initial chart.
+        window.onload = calculate401k;
+    </script>
+</body>
+</html>
