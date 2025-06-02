@@ -1,0 +1,556 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bitcoin Calculator - Lowcountry Ledger</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        /* Custom font for a clean, modern look */
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f8fafc; /* Soft neutral background */
+            color: #334155; /* Darker neutral text */
+            margin: 0; /* Remove default body margin */
+            padding: 20px; /* Add some padding around the calculator */
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh; /* Ensure it takes full viewport height */
+        }
+        .calculator-container {
+            max-width: 700px;
+            width: 100%; /* Make it responsive */
+            margin: 0 auto;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            background-color: #f9f9f9; /* Light background for the container */
+            font-family: 'Inter', sans-serif; /* Apply Inter font */
+        }
+        h1 {
+            color: #f7931a; /* Bitcoin orange for the main heading */
+            text-align: center;
+            margin-bottom: 15px;
+            font-size: 2.25rem; /* Equivalent to text-4xl */
+            font-weight: bold;
+        }
+        .intro-text {
+            text-align: center;
+            color: #4b5563; /* Gray text */
+            margin-bottom: 30px;
+            max-width: 500px;
+            margin-left: auto;
+            margin-right: auto;
+            font-size: 1rem;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 500; /* Medium weight for labels */
+            color: #374151; /* Darker gray for labels */
+            font-size: 0.875rem; /* Equivalent to text-sm */
+        }
+        input[type="number"], input[type="date"] {
+            width: 100%;
+            padding: 10px 12px; /* Increased padding for better touch targets */
+            border: 1px solid #d1d5db; /* Light gray border */
+            border-radius: 8px; /* More rounded corners */
+            box-sizing: border-box;
+            font-size: 1rem;
+            color: #1f2937; /* Dark text for inputs */
+            transition: border-color 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+        }
+        input[type="number"]:focus, input[type="date"]:focus {
+            outline: none;
+            border-color: #f7931a; /* Bitcoin orange border on focus */
+            box-shadow: 0 0 0 3px rgba(247, 147, 26, 0.3); /* Bitcoin orange shadow on focus */
+        }
+        button {
+            background-color: #f7931a; /* Bitcoin orange for button */
+            color: white;
+            padding: 12px 24px; /* Generous padding */
+            border: none;
+            border-radius: 8px; /* Rounded corners */
+            cursor: pointer;
+            font-size: 1rem;
+            font-weight: 600; /* Semi-bold */
+            transition: background-color 0.3s ease-in-out, transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); /* Subtle shadow */
+        }
+        button:hover {
+            background-color: #e08316; /* Darker orange on hover */
+            transform: translateY(-2px); /* Slight lift effect */
+            box-shadow: 0 6px 8px rgba(0, 0, 0, 0.15);
+        }
+        button:focus {
+            outline: none;
+            box-shadow: 0 0 0 4px rgba(247, 147, 26, 0.5); /* Stronger focus ring */
+        }
+
+        .results-section {
+            margin-top: 25px;
+            padding: 15px;
+            background-color: #fff;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+        }
+        .result-item {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 10px;
+            padding-bottom: 5px;
+            border-bottom: 1px dashed #e5e7eb; /* Light dashed line */
+        }
+        .result-item:last-child {
+            border-bottom: none;
+            margin-bottom: 0;
+            padding-bottom: 0;
+        }
+        .result-label {
+            font-weight: 500;
+            color: #4b5563;
+        }
+        .result-value {
+            font-weight: 600;
+            color: #1f2937;
+        }
+        .positive-return {
+            color: #10b981; /* Green for positive returns */
+        }
+        .negative-return {
+            color: #ef4444; /* Red for negative returns */
+        }
+
+        .chart-area {
+            margin-top: 25px;
+            padding: 15px;
+            background-color: #fff;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+            position: relative; /* For message box positioning */
+            height: 300px; /* Fixed height for chart container */
+            display: flex; /* Use flexbox to center chart */
+            justify-content: center;
+            align-items: center;
+        }
+        canvas {
+            max-width: 100%; /* Ensure canvas is responsive */
+            max-height: 100%;
+        }
+        .message-box {
+            position: absolute;
+            inset: 0;
+            background-color: rgba(255, 255, 255, 0.9);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #ef4444; /* Red for errors */
+            font-weight: 500;
+            font-size: 1.125rem; /* Equivalent to text-lg */
+            border-radius: 8px;
+            z-index: 10; /* Above the canvas */
+            text-align: center;
+            padding: 15px;
+        }
+        .hidden {
+            display: none;
+        }
+        .disclaimer {
+            text-align: center;
+            color: #6b7280; /* Medium gray */
+            font-size: 0.75rem; /* Equivalent to text-sm */
+            margin-top: 25px;
+        }
+        
+        /* Form layout improvements */
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px; /* Increased gap for more white space */
+            margin-bottom: 20px;
+        }
+        .button-container {
+            text-align: center;
+            margin-top: 20px;
+        }
+        
+        @media (max-width: 640px) { /* Equivalent to sm: breakpoint */
+            .form-row {
+                grid-template-columns: 1fr; /* Stack inputs on small screens */
+                gap: 15px;
+            }
+            .calculator-container {
+                padding: 15px;
+            }
+            h1 {
+                font-size: 2rem;
+            }
+            .intro-text {
+                font-size: 0.9rem;
+            }
+            .chart-area {
+                height: 250px; /* Slightly smaller chart on mobile */
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="calculator-container">
+        <h1>Bitcoin Calculator</h1>
+        <p class="intro-text">
+            Ever wondered <strong style="color: #f7931a;">what if</strong> you had invested in Bitcoin? See how your hypothetical investment would have performed.
+        </p>
+
+        <div class="form-row">
+            <div class="form-group">
+                <label for="investmentDate">Investment Date:</label>
+                <input type="date" id="investmentDate" value="2017-01-01" min="2015-01-01" max="2025-01-01">
+            </div>
+            <div class="form-group">
+                <label for="investmentAmount">Investment Amount ($):</label>
+                <input type="number" id="investmentAmount" value="100" min="1">
+            </div>
+        </div>
+        
+        <div class="button-container">
+            <button id="calculateBtn">
+                Calculate Returns
+            </button>
+        </div>
+
+        <div class="results-section">
+            <div class="result-item">
+                <span class="result-label">Bitcoin Price on Investment Date:</span>
+                <span class="result-value" id="priceAtInvestmentDate">$0.00</span>
+            </div>
+            <div class="result-item">
+                <span class="result-label">Bitcoin Price Today (Approx.):</span>
+                <span class="result-value" id="priceToday">$0.00</span>
+            </div>
+            <div class="result-item">
+                <span class="result-label">Initial Bitcoin Amount:</span>
+                <span class="result-value" id="initialBitcoinAmount">0 BTC</span>
+            </div>
+            <div class="result-item">
+                <span class="result-label">Current Value of Investment:</span>
+                <span class="result-value" id="currentInvestmentValue">$0.00</span>
+            </div>
+            <div class="result-item">
+                <span class="result-label">Total Return:</span>
+                <span class="result-value" id="totalReturn">$0.00</span>
+            </div>
+            <div class="result-item">
+                <span class="result-label">Percentage Return:</span>
+                <span class="result-value" id="percentageReturn">0.00%</span>
+            </div>
+        </div>
+
+        <div class="chart-area">
+            <canvas id="growthChart"></canvas>
+            <div id="messageBox" class="message-box hidden"></div>
+        </div>
+
+        <p class="disclaimer">
+            For informational purposes only. This calculator uses a limited, hardcoded set of historical Bitcoin prices for demonstration purposes and does not reflect real-time or comprehensive market data. Not investment advice.
+        </p>
+    </div>
+
+    <script>
+        // Hardcoded historical Bitcoin prices (illustrative data for demonstration)
+        // In a real application, you would fetch this data from a reliable API.
+        const historicalPrices = {
+            "2015-01-01": 314.00,
+            "2016-01-01": 430.00,
+            "2017-01-01": 998.00,
+            "2018-01-01": 13600.00,
+            "2019-01-01": 3700.00,
+            "2020-01-01": 7200.00,
+            "2021-01-01": 29000.00,
+            "2022-01-01": 47000.00,
+            "2023-01-01": 16500.00,
+            "2024-01-01": 42000.00,
+            "2025-01-01": 60000.00 // Hypothetical future price for demonstration
+        };
+
+        // Get references to DOM elements
+        const investmentDateInput = document.getElementById('investmentDate');
+        const investmentAmountInput = document.getElementById('investmentAmount');
+        const calculateBtn = document.getElementById('calculateBtn');
+        const priceAtInvestmentDateSpan = document.getElementById('priceAtInvestmentDate');
+        const priceTodaySpan = document.getElementById('priceToday');
+        const initialBitcoinAmountSpan = document.getElementById('initialBitcoinAmount');
+        const currentInvestmentValueSpan = document.getElementById('currentInvestmentValue');
+        const totalReturnSpan = document.getElementById('totalReturn');
+        const percentageReturnSpan = document.getElementById('percentageReturn');
+        const growthChartCanvas = document.getElementById('growthChart');
+        const messageBox = document.getElementById('messageBox');
+
+        let growthChart; // To store the Chart.js instance
+
+        // Set the max date for the input to today's date
+        const today = new Date();
+        investmentDateInput.max = today.toISOString().split('T')[0];
+
+        /**
+         * Finds the closest available Bitcoin price for a given date.
+         * If the exact date is not available, it finds the price for the closest preceding date.
+         * @param {string} targetDate - The date string in "YYYY-MM-DD" format.
+         * @returns {number|null} The Bitcoin price or null if no suitable price is found.
+         */
+        function getBitcoinPriceForDate(targetDate) {
+            const sortedDates = Object.keys(historicalPrices).sort();
+            let closestPrice = null;
+            let closestDate = null;
+
+            for (let i = 0; i < sortedDates.length; i++) {
+                const currentDate = sortedDates[i];
+                if (currentDate <= targetDate) {
+                    closestDate = currentDate;
+                    closestPrice = historicalPrices[currentDate];
+                } else {
+                    // If we've passed the target date, the last closestDate is our best match
+                    break;
+                }
+            }
+            return closestPrice;
+        }
+
+        /**
+         * Displays a message in the message box.
+         * @param {string} message - The message to display.
+         * @param {string} type - The type of message ('error' or 'info').
+         */
+        function showMessage(message, type = 'info') {
+            messageBox.textContent = message;
+            messageBox.classList.remove('hidden');
+            if (type === 'error') {
+                messageBox.style.color = '#ef4444'; // Red for errors
+            } else {
+                messageBox.style.color = '#10b981'; // Green for info
+            }
+            // Hide message after a few seconds
+            setTimeout(() => {
+                messageBox.classList.add('hidden');
+            }, 5000);
+        }
+
+        /**
+         * Formats a number as currency.
+         * @param {number} amount - The amount to format.
+         * @returns {string} The formatted currency string.
+         */
+        function formatCurrency(amount) {
+            return new Intl.NumberFormat('en-US', {
+                style: 'currency',
+                currency: 'USD',
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2
+            }).format(amount);
+        }
+
+        /**
+         * Renders or updates the Chart.js graph.
+         * @param {Array<string>} labels - Array of year labels.
+         * @param {Array<number>} data - Array of projected balances.
+         */
+        function renderChart(labels, data) {
+            // Destroy existing chart if it exists to prevent memory leaks and re-render issues
+            if (growthChart) {
+                growthChart.destroy();
+            }
+
+            growthChart = new Chart(growthChartCanvas, {
+                type: 'line', // Line chart for growth over time
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Investment Value ($)',
+                        data: data,
+                        borderColor: '#f7931a', // Bitcoin orange for the line
+                        backgroundColor: 'rgba(247, 147, 26, 0.2)', // Light orange fill for area effect
+                        fill: true, // Fill the area under the line
+                        tension: 0.3, // Smooth the line
+                        pointRadius: 3, // Size of data points
+                        pointBackgroundColor: '#e08316', // Darker orange for points
+                        pointBorderColor: '#fff',
+                        pointHoverRadius: 5,
+                        pointHoverBackgroundColor: '#e08316'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false, // Allow canvas to resize freely within its container
+                    plugins: {
+                        legend: {
+                            display: true,
+                            position: 'top',
+                            labels: {
+                                font: {
+                                    size: 14,
+                                    family: 'Inter'
+                                },
+                                color: '#4b5563'
+                            }
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    return `${context.dataset.label}: ${formatCurrency(context.raw)}`;
+                                }
+                            },
+                            bodyFont: {
+                                family: 'Inter'
+                            },
+                            titleFont: {
+                                family: 'Inter'
+                            }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            title: {
+                                display: true,
+                                text: 'Year',
+                                color: '#4b5563',
+                                font: {
+                                    size: 16,
+                                    weight: 'bold',
+                                    family: 'Inter'
+                                }
+                            },
+                            grid: {
+                                display: false // Hide x-axis grid lines for cleaner look
+                            },
+                            ticks: {
+                                color: '#64748b',
+                                font: {
+                                    family: 'Inter'
+                                }
+                            }
+                        },
+                        y: {
+                            title: {
+                                display: true,
+                                text: 'Value ($)',
+                                color: '#4b5563',
+                                font: {
+                                    size: 16,
+                                    weight: 'bold',
+                                    family: 'Inter'
+                                }
+                            },
+                            beginAtZero: true,
+                            ticks: {
+                                callback: function(value) {
+                                    return '$' + value.toLocaleString(); // Format y-axis labels as currency
+                                },
+                                color: '#64748b',
+                                font: {
+                                    family: 'Inter'
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        /**
+         * Calculates and displays the Bitcoin investment scenario.
+         */
+        function calculateBitcoinScenario() {
+            const investmentDate = investmentDateInput.value;
+            const investmentAmount = parseFloat(investmentAmountInput.value);
+
+            // Input validation
+            if (!investmentDate) {
+                showMessage('Please select an investment date.', 'error');
+                return;
+            }
+            if (isNaN(investmentAmount) || investmentAmount <= 0) {
+                showMessage('Please enter a valid investment amount (positive number).', 'error');
+                return;
+            }
+
+            // Hide message box if validation passes
+            messageBox.classList.add('hidden');
+
+            const priceOnInvestmentDate = getBitcoinPriceForDate(investmentDate);
+            const priceToday = historicalPrices["2025-01-01"]; // Using a fixed end date from hardcoded data
+
+            if (!priceOnInvestmentDate) {
+                showMessage('Bitcoin price data not available for the selected investment date or earlier. Please choose a date from 2015-01-01 onwards.', 'error');
+                // Clear previous results
+                priceAtInvestmentDateSpan.textContent = '$0.00';
+                priceTodaySpan.textContent = '$0.00';
+                initialBitcoinAmountSpan.textContent = '0 BTC';
+                currentInvestmentValueSpan.textContent = '$0.00';
+                totalReturnSpan.textContent = '$0.00';
+                percentageReturnSpan.textContent = '0.00%';
+                renderChart([], []); // Clear chart
+                return;
+            }
+
+            const initialBitcoinAmount = investmentAmount / priceOnInvestmentDate;
+            const currentInvestmentValue = initialBitcoinAmount * priceToday;
+            const totalReturn = currentInvestmentValue - investmentAmount;
+            const percentageReturn = (totalReturn / investmentAmount) * 100;
+
+            // Display results
+            priceAtInvestmentDateSpan.textContent = formatCurrency(priceOnInvestmentDate);
+            priceTodaySpan.textContent = formatCurrency(priceToday);
+            initialBitcoinAmountSpan.textContent = `${initialBitcoinAmount.toFixed(8)} BTC`;
+            currentInvestmentValueSpan.textContent = formatCurrency(currentInvestmentValue);
+
+            totalReturnSpan.textContent = formatCurrency(totalReturn);
+            if (totalReturn >= 0) {
+                totalReturnSpan.classList.remove('negative-return');
+                totalReturnSpan.classList.add('positive-return');
+            } else {
+                totalReturnSpan.classList.remove('positive-return');
+                totalReturnSpan.classList.add('negative-return');
+            }
+
+            percentageReturnSpan.textContent = `${percentageReturn.toFixed(2)}%`;
+            if (percentageReturn >= 0) {
+                percentageReturnSpan.classList.remove('negative-return');
+                percentageReturnSpan.classList.add('positive-return');
+            } else {
+                percentageReturnSpan.classList.remove('positive-return');
+                percentageReturnSpan.classList.add('negative-return');
+            }
+
+            // Prepare data for chart
+            const chartLabels = [];
+            const chartData = [];
+            const sortedDates = Object.keys(historicalPrices).sort();
+
+            let currentSimulatedValue = investmentAmount;
+            let currentBitcoinHolding = initialBitcoinAmount;
+
+            for (const date of sortedDates) {
+                if (date >= investmentDate && date <= "2025-01-01") { // Only show data from investment date to today's approx. date
+                    chartLabels.push(date.substring(0, 4)); // Just the year for labels
+                    const priceAtCurrentChartPoint = historicalPrices[date];
+                    const valueAtCurrentChartPoint = currentBitcoinHolding * priceAtCurrentChartPoint;
+                    chartData.push(valueAtCurrentChartPoint);
+                }
+            }
+            renderChart(chartLabels, chartData);
+        }
+
+        // Event listener for the calculate button
+        calculateBtn.addEventListener('click', calculateBitcoinScenario);
+
+        // Initial calculation and chart render on page load with default values
+        window.onload = function() {
+            calculateBitcoinScenario(); // Simulate a click to render the initial chart
+        };
+    </script>
+</body>
+</html>
