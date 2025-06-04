@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Loan Payoff Calculator</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Custom font for a clean look */
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f3f4f6; /* Light gray background */
+        }
+        /* Hide number input arrows for a cleaner look */
+        input[type=number]::-webkit-outer-spin-button,
+        input[type=number]::-webkit-inner-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
+        }
+        input[type=number] {
+            -moz-appearance: textfield;
+        }
+        /* Styling for the amortization table */
+        .amortization-table-container {
+            max-height: 400px; /* Limit height to enable scrolling */
+            overflow-y: auto; /* Enable vertical scrolling */
+            -webkit-overflow-scrolling: touch; /* Smooth scrolling on iOS */
+            border: 1px solid #e2e8f0; /* Light border */
+            border-radius: 0.75rem; /* Rounded corners */
+            box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.06); /* Inner shadow */
+        }
+        .amortization-table {
+            width: 100%;
+            border-collapse: collapse; /* Collapse borders for a clean look */
+            font-size: 0.875rem; /* Smaller font size for table content */
+        }
+        .amortization-table th, .amortization-table td {
+            padding: 0.75rem 1rem; /* Padding for cells */
+            text-align: right; /* Align numbers to the right */
+            border-bottom: 1px solid #e2e8f0; /* Bottom border for rows */
+        }
+        .amortization-table th {
+            background-color: #f8fafc; /* Light background for headers */
+            font-weight: 600; /* Semi-bold headers */
+            text-align: center; /* Center header text */
+            position: sticky; /* Sticky header for scrolling table */
+            top: 0; /* Stick to the top */
+            z-index: 10; /* Ensure header is above content */
+        }
+        .amortization-table tbody tr:last-child td {
+            border-bottom: none; /* No bottom border for the last row */
+        }
+        .amortization-table tbody tr:nth-child(even) {
+            background-color: #fbfdff; /* Slightly different background for even rows */
+        }
+    </style>
+</head>
+<body class="flex flex-col items-center justify-center min-h-screen p-4 bg-gray-100">
+    <div class="bg-white p-8 rounded-xl shadow-lg w-full max-w-2xl mb-8">
+        <h1 class="text-3xl font-bold text-gray-800 mb-6 text-center">Loan Payoff Calculator</h1>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+            <div class="mb-2 md:mb-0">
+                <label for="loanAmount" class="block text-gray-700 text-sm font-semibold mb-2">Loan Amount ($)</label>
+                <input type="number" id="loanAmount" class="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="e.g., 200000" value="200000">
+            </div>
+
+            <div class="mb-2 md:mb-0">
+                <label for="interestRate" class="block text-gray-700 text-sm font-semibold mb-2">Annual Interest Rate (%)</label>
+                <input type="number" id="interestRate" class="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="e.g., 4.5" step="0.01" value="4.5">
+            </div>
+
+            <div class="mb-2 md:mb-0">
+                <label for="loanTerm" class="block text-gray-700 text-sm font-semibold mb-2">Loan Term (Years)</label>
+                <input type="number" id="loanTerm" class="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="e.g., 30" value="30">
+            </div>
+        </div>
+
+        <button id="calculateBtn" class="w-full bg-blue-600 text-white p-3 rounded-lg font-semibold hover:bg-blue-700 transition duration-300 shadow-md">
+            Calculate Payoff
+        </button>
+
+        <div id="error-message" class="mt-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded-lg hidden" role="alert">
+            Please enter valid numeric values for all fields (Loan Amount, Interest Rate, and Loan Term must be positive).
+        </div>
+    </div>
+
+    <div id="results-container" class="w-full max-w-2xl hidden">
+        <div id="results" class="bg-blue-50 p-6 rounded-xl border border-blue-200 mb-8">
+            <h2 class="text-xl font-bold text-blue-800 mb-4 text-center">Summary</h2>
+            <p class="text-gray-700 mb-2">
+                <span class="font-semibold">Monthly Payment:</span> <span id="monthlyPayment" class="text-blue-700 font-bold"></span>
+            </p>
+            <p class="text-gray-700 mb-2">
+                <span class="font-semibold">Total Interest Paid:</span> <span id="totalInterest" class="text-blue-700 font-bold"></span>
+            </p>
+            <p class="text-gray-700">
+                <span class="font-semibold">Total Cost of Loan:</span> <span id="totalCost" class="text-blue-700 font-bold"></span>
+            </p>
+        </div>
+
+        <div class="bg-white p-6 rounded-xl shadow-lg">
+            <h2 class="text-xl font-bold text-gray-800 mb-4 text-center">Amortization Schedule (Yearly)</h2>
+            <div id="amortizationTableContainer" class="amortization-table-container">
+                <!-- Amortization table will be inserted here by JavaScript -->
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Get references to HTML elements
+        const loanAmountInput = document.getElementById('loanAmount');
+        const interestRateInput = document.getElementById('interestRate');
+        const loanTermInput = document.getElementById('loanTerm');
+        const calculateBtn = document.getElementById('calculateBtn');
+        const resultsContainerDiv = document.getElementById('results-container');
+        const resultsDiv = document.getElementById('results');
+        const monthlyPaymentSpan = document.getElementById('monthlyPayment');
+        const totalInterestSpan = document.getElementById('totalInterest');
+        const totalCostSpan = document.getElementById('totalCost');
+        const errorMessageDiv = document.getElementById('error-message');
+        const amortizationTableContainer = document.getElementById('amortizationTableContainer');
+
+        /**
+         * Calculates the monthly payment, total interest, total cost, and generates an annual amortization schedule.
+         * @returns {Object|null} An object containing loan details and the annual amortization schedule, or null if inputs are invalid.
+         */
+        function calculateLoanDetails() {
+            // Get input values and convert to numbers
+            const loanAmount = parseFloat(loanAmountInput.value);
+            const annualInterestRate = parseFloat(interestRateInput.value);
+            const loanTermYears = parseFloat(loanTermInput.value);
+
+            // Validate inputs
+            if (isNaN(loanAmount) || isNaN(annualInterestRate) || isNaN(loanTermYears) ||
+                loanAmount <= 0 || annualInterestRate < 0 || loanTermYears <= 0) {
+                errorMessageDiv.classList.remove('hidden');
+                resultsContainerDiv.classList.add('hidden'); // Hide results if inputs are invalid
+                return null;
+            }
+
+            // Convert annual interest rate to monthly interest rate
+            const monthlyInterestRate = (annualInterestRate / 100) / 12;
+            // Convert loan term from years to months
+            const numberOfPayments = loanTermYears * 12;
+
+            let monthlyPayment;
+            if (monthlyInterestRate === 0) {
+                // Simple calculation for 0% interest
+                monthlyPayment = loanAmount / numberOfPayments;
+            } else {
+                // Formula for calculating monthly payment (M = P [ i(1 + i)^n ] / [ (1 + i)^n – 1])
+                monthlyPayment = loanAmount * (monthlyInterestRate * Math.pow(1 + monthlyInterestRate, numberOfPayments)) /
+                                 (Math.pow(1 + monthlyInterestRate, numberOfPayments) - 1);
+            }
+
+            // Calculate total cost and total interest
+            const totalCost = monthlyPayment * numberOfPayments;
+            const totalInterest = totalCost - loanAmount;
+
+            // Generate Annual Amortization Schedule
+            const annualAmortizationSchedule = [];
+            let currentBalance = loanAmount;
+            let annualInterestPaid = 0;
+            let annualPrincipalPaid = 0;
+            let annualPaymentTotal = 0;
+            let currentYear = 1;
+
+            for (let month = 1; month <= numberOfPayments; month++) {
+                let interestPaidThisMonth;
+                let principalPaidThisMonth;
+
+                if (monthlyInterestRate === 0) {
+                    interestPaidThisMonth = 0;
+                    principalPaidThisMonth = monthlyPayment;
+                } else {
+                    interestPaidThisMonth = currentBalance * monthlyInterestRate;
+                    principalPaidThisMonth = monthlyPayment - interestPaidThisMonth;
+                }
+
+                // Adjust the last payment to account for potential floating-point inaccuracies
+                if (month === numberOfPayments) {
+                    principalPaidThisMonth = currentBalance;
+                    monthlyPayment = principalPaidThisMonth + interestPaidThisMonth; // Recalculate monthly payment for the last month
+                }
+
+                const endingBalance = currentBalance - principalPaidThisMonth;
+
+                annualInterestPaid += interestPaidThisMonth;
+                annualPrincipalPaid += principalPaidThisMonth;
+                annualPaymentTotal += monthlyPayment;
+                currentBalance = endingBalance;
+
+                // If it's the end of a year or the last payment
+                if (month % 12 === 0 || month === numberOfPayments) {
+                    annualAmortizationSchedule.push({
+                        year: currentYear,
+                        startingBalance: annualAmortizationSchedule.length === 0 ? loanAmount : annualAmortizationSchedule[annualAmortizationSchedule.length - 1].endingBalance,
+                        annualPayment: annualPaymentTotal,
+                        annualInterestPaid: annualInterestPaid,
+                        annualPrincipalPaid: annualPrincipalPaid,
+                        endingBalance: currentBalance < 0.01 ? 0 : currentBalance // Ensure balance doesn't go negative due to precision
+                    });
+
+                    // Reset for the next year
+                    annualInterestPaid = 0;
+                    annualPrincipalPaid = 0;
+                    annualPaymentTotal = 0;
+                    currentYear++;
+                }
+            }
+
+            return {
+                monthlyPayment: monthlyPayment, // Still useful for summary
+                totalInterest: totalInterest,
+                totalCost: totalCost,
+                amortizationSchedule: annualAmortizationSchedule // Now contains annual data
+            };
+        }
+
+        /**
+         * Displays the annual amortization schedule in a table format.
+         * @param {Array} schedule - The annual amortization schedule array.
+         */
+        function displayAmortizationTable(schedule) {
+            // Clear previous table content
+            amortizationTableContainer.innerHTML = '';
+
+            if (schedule.length === 0) {
+                amortizationTableContainer.innerHTML = '<p class="text-center text-gray-600">No amortization schedule to display.</p>';
+                return;
+            }
+
+            const table = document.createElement('table');
+            table.classList.add('amortization-table', 'w-full', 'text-sm', 'text-gray-700');
+
+            // Create table header
+            const thead = table.createTHead();
+            const headerRow = thead.insertRow();
+            const headers = ['Year', 'Starting Balance', 'Annual Payment', 'Annual Interest Paid', 'Annual Principal Paid', 'Ending Balance'];
+            headers.forEach(text => {
+                const th = document.createElement('th');
+                th.textContent = text;
+                th.classList.add('px-4', 'py-3', 'bg-gray-50', 'font-semibold', 'text-left', 'text-gray-600', 'uppercase', 'tracking-wider');
+                headerRow.appendChild(th);
+            });
+
+            // Create table body
+            const tbody = table.createTBody();
+            schedule.forEach(row => {
+                const tr = tbody.insertRow();
+                tr.classList.add('border-b', 'border-gray-200', 'hover:bg-gray-50');
+                // Format numbers to two decimal places and add currency symbol
+                const values = [
+                    row.year,
+                    `$${row.startingBalance.toFixed(2)}`,
+                    `$${row.annualPayment.toFixed(2)}`,
+                    `$${row.annualInterestPaid.toFixed(2)}`,
+                    `$${row.annualPrincipalPaid.toFixed(2)}`,
+                    `$${row.endingBalance.toFixed(2)}`
+                ];
+                values.forEach(value => {
+                    const td = tr.insertCell();
+                    td.textContent = value;
+                    td.classList.add('px-4', 'py-3', 'whitespace-nowrap', 'text-right');
+                });
+            });
+
+            amortizationTableContainer.appendChild(table);
+        }
+
+        /**
+         * Main function to handle loan calculation and display results.
+         */
+        function handleCalculateLoan() {
+            // Hide previous results and error message
+            resultsContainerDiv.classList.add('hidden');
+            errorMessageDiv.classList.add('hidden');
+
+            const loanDetails = calculateLoanDetails();
+
+            if (loanDetails) {
+                // Display summary results
+                monthlyPaymentSpan.textContent = `$${loanDetails.monthlyPayment.toFixed(2)}`;
+                totalInterestSpan.textContent = `$${loanDetails.totalInterest.toFixed(2)}`;
+                totalCostSpan.textContent = `$${loanDetails.totalCost.toFixed(2)}`;
+
+                // Display amortization table (now annual)
+                displayAmortizationTable(loanDetails.amortizationSchedule);
+
+                // Show the results section
+                resultsContainerDiv.classList.remove('hidden');
+            }
+        }
+
+        // Add event listener to the calculate button
+        calculateBtn.addEventListener('click', handleCalculateLoan);
+
+        // Optional: Trigger calculation on Enter key press in input fields
+        loanAmountInput.addEventListener('keypress', function(event) {
+            if (event.key === 'Enter') handleCalculateLoan();
+        });
+        interestRateInput.addEventListener('keypress', function(event) {
+            if (event.key === 'Enter') handleCalculateLoan();
+        });
+        loanTermInput.addEventListener('keypress', function(event) {
+            if (event.key === 'Enter') handleCalculateLoan();
+        });
+
+        // Initial calculation when the page loads with default values
+        window.onload = handleCalculateLoan;
+    </script>
+</body>
+</html>
